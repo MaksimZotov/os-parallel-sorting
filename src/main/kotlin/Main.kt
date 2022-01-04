@@ -1,5 +1,4 @@
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
+import kotlin.concurrent.thread
 import kotlin.random.Random.Default.nextInt
 import kotlin.system.measureTimeMillis
 
@@ -38,8 +37,7 @@ fun measureTime(threads: Int, iterations: Int, arraySize: Int, maxValue: Int) {
 
 
 fun doWork(array: IntArray, threads: Int): Long {
-    val executorService = Executors.newFixedThreadPool(threads)
-    val futures = mutableListOf<Future<*>>()
+    val threadsList = mutableListOf<Thread>()
     val step = array.size / threads + 1
     var intervals = mutableListOf<Pair<Int, Int>>()
 
@@ -54,12 +52,12 @@ fun doWork(array: IntArray, threads: Int): Long {
     val time = measureTimeMillis {
 
         for (interval in intervals) {
-            futures.add(executorService.submit {
+            threadsList.add(thread {
                 sort(array, interval.first, interval.second)
             })
         }
-        wait(futures)
-        futures.clear()
+        wait(threadsList)
+        threadsList.clear()
 
         if (threads == 1) {
             return@measureTimeMillis
@@ -81,7 +79,7 @@ fun doWork(array: IntArray, threads: Int): Long {
                 nextIntervals.add(begin to end)
 
                 if (leftInterval != rightInterval) {
-                    futures.add(executorService.submit {
+                    threadsList.add(thread {
                         merge(
                             array,
                             leftInterval.first,
@@ -93,12 +91,11 @@ fun doWork(array: IntArray, threads: Int): Long {
                 }
             }
 
-            wait(futures)
-            futures.clear()
+            wait(threadsList)
+            threadsList.clear()
             intervals = nextIntervals
         }
     }
-    executorService.shutdown()
     return time
 }
 
@@ -110,9 +107,9 @@ fun createArray(arraySize: Int, maxValue: Int): IntArray {
     return arrayInt
 }
 
-fun wait(futures: MutableList<Future<*>>) {
+fun wait(futures: MutableList<Thread>) {
     for (future in futures) {
-        future.get()
+        future.join()
     }
 }
 
@@ -160,30 +157,4 @@ fun bubbleSort(array: IntArray, begin: Int, end: Int) {
             }
         }
     }
-}
-
-fun demonstrateExecutorService() {
-    val executorService = Executors.newFixedThreadPool(2)
-    val task1 = executorService.submit<String> {
-        Thread.sleep(1000)
-        val name = Thread.currentThread().name
-        println("Inside: $name")
-        name
-    }
-    val task2 = executorService.submit<String> {
-        Thread.sleep(2000)
-        val name = Thread.currentThread().name
-        println("Inside: $name")
-        name
-    }
-    println("Outside: ${task1.get()}")
-    println("Outside: ${task2.get()}")
-    val task3 = executorService.submit<String> {
-        Thread.sleep(1000)
-        val name = Thread.currentThread().name
-        println("Inside: $name")
-        name
-    }
-    println("Outside: ${task3.get()}")
-    executorService.shutdown()
 }
