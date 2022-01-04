@@ -1,7 +1,9 @@
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import kotlin.random.Random.Default.nextInt
-import kotlin.system.measureTimeMillis
+import kotlin.system.measureNanoTime
+
+const val DEFAULT_NUM_OF_THREADS_IN_THREAD_POOL = 8
 
 fun main() {
     checkParallelSort()
@@ -37,8 +39,8 @@ fun measureTime(threads: Int, iterations: Int, arraySize: Int, maxValue: Int) {
 }
 
 
-fun doWork(array: IntArray, threads: Int): Long {
-    val executorService = Executors.newFixedThreadPool(threads)
+fun doWork(array: IntArray, threads: Int, defaultNumOfThreads: Int = threads): Long {
+    val executorService = Executors.newFixedThreadPool(defaultNumOfThreads)
     val futures = mutableListOf<Future<*>>()
     val step = array.size / threads + 1
     var intervals = mutableListOf<Pair<Int, Int>>()
@@ -51,7 +53,7 @@ fun doWork(array: IntArray, threads: Int): Long {
         intervals.add(begin to end)
     }
 
-    val time = measureTimeMillis {
+    val time = measureNanoTime {
 
         for (interval in intervals) {
             futures.add(executorService.submit {
@@ -62,7 +64,7 @@ fun doWork(array: IntArray, threads: Int): Long {
         futures.clear()
 
         if (threads == 1) {
-            return@measureTimeMillis
+            return@measureNanoTime
         }
 
         while (intervals.size > 1) {
