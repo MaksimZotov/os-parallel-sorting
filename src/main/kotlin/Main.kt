@@ -1,6 +1,6 @@
 import kotlin.concurrent.thread
 import kotlin.random.Random.Default.nextInt
-import kotlin.system.measureTimeMillis
+import kotlin.system.measureNanoTime
 
 fun main() {
     checkParallelSort()
@@ -49,7 +49,7 @@ fun doWork(array: IntArray, threads: Int): Long {
         intervals.add(begin to end)
     }
 
-    val time = measureTimeMillis {
+    val time = measureNanoTime {
 
         for (interval in intervals) {
             threadsList.add(thread {
@@ -60,7 +60,7 @@ fun doWork(array: IntArray, threads: Int): Long {
         threadsList.clear()
 
         if (threads == 1) {
-            return@measureTimeMillis
+            return@measureNanoTime
         }
 
         while (intervals.size > 1) {
@@ -107,9 +107,9 @@ fun createArray(arraySize: Int, maxValue: Int): IntArray {
     return arrayInt
 }
 
-fun wait(futures: MutableList<Thread>) {
-    for (future in futures) {
-        future.join()
+fun wait(threads: MutableList<Thread>) {
+    for (thread in threads) {
+        thread.join()
     }
 }
 
