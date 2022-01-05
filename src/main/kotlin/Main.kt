@@ -2,6 +2,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import kotlin.random.Random.Default.nextInt
 import kotlin.system.measureNanoTime
+import kotlin.system.measureTimeMillis
 
 const val DEFAULT_NUM_OF_THREADS_IN_THREAD_POOL = 8
 
@@ -10,16 +11,16 @@ fun main() {
 }
 
 fun sort(array: IntArray, begin: Int, end: Int) {
-    mergeSort(array, begin, end + 1)
-    //bubbleSort(array, begin, end)
+    //mergeSort(array, begin, end + 1)
+    bubbleSort(array, begin, end)
 }
 
 fun checkParallelSort() {
     val threadsMin = 1
     val threadsMax = 100
-    val iterations = 30
-    val arraySize = 15_000
-    val maxValue = 100
+    val iterations = 15
+    val arraySize = 1_000
+    val maxValue = arraySize / 3
     for (threads in threadsMin..threadsMax) {
         measureTime(threads, iterations, arraySize, maxValue)
     }
@@ -30,12 +31,12 @@ fun measureTime(threads: Int, iterations: Int, arraySize: Int, maxValue: Int) {
     repeat(iterations) {
         val array = createArray(arraySize, maxValue)
         val expected = array.sortedArray()
-        time += doWork(array, threads)
+        time += doWork(array, threads, DEFAULT_NUM_OF_THREADS_IN_THREAD_POOL)
         if (!array.contentEquals(expected)) {
             throw Exception("Array is invalid")
         }
     }
-    println("[$threads; ${time / iterations}]")
+    println("${time / iterations}")
 }
 
 
@@ -53,7 +54,7 @@ fun doWork(array: IntArray, threads: Int, defaultNumOfThreads: Int = threads): L
         intervals.add(begin to end)
     }
 
-    val time = measureNanoTime {
+    val time = measureTimeMillis {
 
         for (interval in intervals) {
             futures.add(executorService.submit {
@@ -64,7 +65,7 @@ fun doWork(array: IntArray, threads: Int, defaultNumOfThreads: Int = threads): L
         futures.clear()
 
         if (threads == 1) {
-            return@measureNanoTime
+            return@measureTimeMillis
         }
 
         while (intervals.size > 1) {
