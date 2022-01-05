@@ -1,5 +1,6 @@
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import kotlin.concurrent.thread
 import kotlin.random.Random.Default.nextInt
 import kotlin.system.measureNanoTime
 import kotlin.system.measureTimeMillis
@@ -18,7 +19,7 @@ fun sort(array: IntArray, begin: Int, end: Int) {
 fun checkParallelSort() {
     val threadsMin = 1
     val threadsMax = 100
-    val iterations = 15
+    val iterations = 20
     val arraySize = 1_000
     val maxValue = arraySize / 3
     for (threads in threadsMin..threadsMax) {
@@ -31,7 +32,7 @@ fun measureTime(threads: Int, iterations: Int, arraySize: Int, maxValue: Int) {
     repeat(iterations) {
         val array = createArray(arraySize, maxValue)
         val expected = array.sortedArray()
-        time += doWork(array, threads, DEFAULT_NUM_OF_THREADS_IN_THREAD_POOL)
+        time += doWorkThreads(array, threads)
         if (!array.contentEquals(expected)) {
             throw Exception("Array is invalid")
         }
@@ -189,4 +190,73 @@ fun demonstrateExecutorService() {
     }
     println("Outside: ${task3.get()}")
     executorService.shutdown()
+}
+
+fun doWorkThreads(array: IntArray, threads: Int): Long {
+    val threadsList = mutableListOf<Thread>()
+    val step = array.size / threads + 1
+    var intervals = mutableListOf<Pair<Int, Int>>()
+
+    for (begin in array.indices step step) {
+        var end = begin + step - 1
+        if (end > array.lastIndex) {
+            end = array.lastIndex
+        }
+        intervals.add(begin to end)
+    }
+
+    val time = measureTimeMillis {
+
+        for (interval in intervals) {
+            threadsList.add(thread {
+                sort(array, interval.first, interval.second)
+            })
+        }
+        waitThreads(threadsList)
+        threadsList.clear()
+
+        if (threads == 1) {
+            return@measureTimeMillis
+        }
+
+        while (intervals.size > 1) {
+
+            val nextIntervals = mutableListOf<Pair<Int, Int>>()
+
+            for (i in intervals.indices step 2) {
+
+                val leftInterval = intervals[i]
+                val rightInterval =
+                    if (i + 1 < intervals.size) intervals[i + 1] else intervals[i]
+
+                val begin = leftInterval.first
+                val end = rightInterval.second
+
+                nextIntervals.add(begin to end)
+
+                if (leftInterval != rightInterval) {
+                    threadsList.add(thread {
+                        merge(
+                            array,
+                            leftInterval.first,
+                            leftInterval.second,
+                            rightInterval.first,
+                            rightInterval.second
+                        )
+                    })
+                }
+            }
+
+            waitThreads(threadsList)
+            threadsList.clear()
+            intervals = nextIntervals
+        }
+    }
+    return time
+}
+
+fun waitThreads(threads: MutableList<Thread>) {
+    for (thread in threads) {
+        thread.join()
+    }
 }
