@@ -231,7 +231,7 @@ fun demonstrateExecutorService() {
         futures.add(executorService.submit {
             println("Start\tIndex: $i\tThread: ${Thread.currentThread().name}")
             var sum = 0
-            repeat(1000_000) {
+            repeat(1_000_000) {
                 val a = nextInt(10_000)
                 val b = nextInt(10_000) + 1
                 val c = a * b + a / b
